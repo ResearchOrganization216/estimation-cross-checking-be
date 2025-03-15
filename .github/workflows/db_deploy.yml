@@ -1,0 +1,71 @@
+name: "Deploy Database and Run Migrations"
+
+on:
+  push:
+    branches:
+      - "main"
+
+env:
+  PROJECT_ID: "${{ secrets.PROJECT_ID }}"
+  GKE_CLUSTER: "${{ secrets.GKE_CLUSTER }}"
+  GKE_ZONE: "${{ secrets.GKE_ZONE }}"
+  GKE_NAMESPACE: "${{ secrets.GKE_NAMESPACE }}"
+  GAR_REGION: "${{ secrets.GAR_REGION }}"
+  GAR_NAME: "${{ secrets.GAR_NAME }}"
+  # Constructing image URLs using Artifact Registry format
+  POSTGRES_IMAGE: "${{ secrets.GAR_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.GAR_NAME }}/postgres:latest"
+  FLYWAY_IMAGE: "${{ secrets.GAR_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.GAR_NAME }}/flyway-migrations:latest"
+
+jobs:
+  deploy-db:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      - name: "Authenticate to GCP"
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: "${{ secrets.GCP_CREDS }}"
+
+      - name: "Set up Cloud SDK"
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: "Docker Auth To GAR"
+        run: |
+          gcloud auth configure-docker "${{ env.GAR_REGION }}-docker.pkg.dev"
+
+      - name: "Build and Push Postgres Image"
+        run: |
+          docker build -t "${{ env.POSTGRES_IMAGE }}" -f docker/postgres/Dockerfile .
+          docker push "${{ env.POSTGRES_IMAGE }}"
+
+      - name: "Build and Push Flyway Image"
+        run: |
+          docker build -t "${{ env.FLYWAY_IMAGE }}" -f docker/flyway/Dockerfile .
+          docker push "${{ env.FLYWAY_IMAGE }}"
+
+      - name: "Get GKE Credentials"
+        run: |
+          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} --zone ${{ env.GKE_ZONE }} --project ${{ env.PROJECT_ID }}
+
+      - name: "Deploy Postgres Resources"
+        run: |
+          # Replace the image placeholder in the deployment manifest if needed
+          sed -i "s|<POSTGRES_IMAGE_PLACEHOLDER>|${{ env.POSTGRES_IMAGE }}|g" kubernetes/postgres-deployment.yaml
+          kubectl apply -f kubernetes/postgres-deployment.yaml -n ${{ env.GKE_NAMESPACE }}
+          kubectl apply -f kubernetes/postgres-service.yaml -n ${{ env.GKE_NAMESPACE }}
+
+      - name: "Deploy Flyway Migration Job"
+        run: |
+          # Replace the image placeholder in the flyway migration job manifest if needed
+          sed -i "s|<FLYWAY_IMAGE_PLACEHOLDER>|${{ env.FLYWAY_IMAGE }}|g" kubernetes/flyway-migration-job.yaml
+          kubectl apply -f kubernetes/flyway-migration-job.yaml -n ${{ env.GKE_NAMESPACE }}
+
+      - name: "Wait for Flyway Migration Job to Complete"
+        run: |
+          kubectl wait --for=condition=complete --timeout=300s job/flyway-migration -n ${{ env.GKE_NAMESPACE }}

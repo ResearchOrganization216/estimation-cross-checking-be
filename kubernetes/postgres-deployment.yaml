@@ -1,0 +1,73 @@
+# --- Creating a Secret for the Postgres password ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+type: Opaque
+data:
+  # "password" base64-encoded (e.g., echo -n "password" | base64)
+  password: cGFzc3dvcmQ=
+
+---
+# --- ConfigMap containing the initialization script ---
+# This script is mounted to /docker-entrypoint-initdb.d so that on first startup
+# Postgres creates the "InnoAInsure" database and enables the extensions.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-scripts
+data:
+  init.sql: |
+    CREATE DATABASE "InnoAInsure" WITH OWNER postgres;
+    -- Switch to the new database (this command is interpreted by psql during initialization)
+    \c "InnoAInsure";
+    CREATE EXTENSION IF NOT EXISTS postgis;
+    CREATE EXTENSION IF NOT EXISTS vector;
+
+---
+# --- StatefulSet to deploy Postgres ---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+spec:
+  serviceName: "postgres"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: asia-southeast1-docker.pkg.dev/proven-answer-451215-k1/innoainsure-be/postgres:latest
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: init-scripts
+          configMap:
+            name: postgres-init-scripts
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
