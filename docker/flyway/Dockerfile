@@ -2,4 +2,4 @@
 FROM flyway/flyway
 
 # Copying all migration scripts from the local 'sql' folder into the image
-COPY sql /flyway/sql
+#COPY sql /flyway/sql
