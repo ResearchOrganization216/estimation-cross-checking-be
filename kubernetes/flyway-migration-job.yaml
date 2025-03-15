@@ -1,0 +1,23 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: flyway-migration
+spec:
+  template:
+    spec:
+      containers:
+        - name: flyway
+          image: asia-southeast1-docker.pkg.dev/proven-answer-451215-k1/innoainsure-be/flyway-migrations:latest
+          command: ["flyway", "migrate"]
+          env:
+            - name: FLYWAY_URL
+              value: "jdbc:postgresql://postgres:5432/InnoAInsure"
+            - name: FLYWAY_USER
+              value: "postgres"
+            - name: FLYWAY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+      restartPolicy: Never
+  backoffLimit: 3
