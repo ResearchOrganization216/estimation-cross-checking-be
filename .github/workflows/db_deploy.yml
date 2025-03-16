@@ -1,4 +1,4 @@
-name: "Deploy Database and Run Migrations"
+name: "Deploy Database"
 
 on:
   push:
@@ -12,7 +12,6 @@ env:
   GKE_NAMESPACE: "${{ secrets.GKE_NAMESPACE }}"
   GAR_REGION: "${{ secrets.GAR_REGION }}"
   GAR_NAME: "${{ secrets.GAR_NAME }}"
-  # Constructing image URLs using Artifact Registry format
   POSTGRES_IMAGE: "${{ secrets.GAR_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.GAR_NAME }}/postgres:latest"
   FLYWAY_IMAGE: "${{ secrets.GAR_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.GAR_NAME }}/flyway-migrations:latest"
 
@@ -22,7 +21,6 @@ jobs:
     permissions:
       contents: read
       id-token: write
-
     steps:
       - name: "Checkout"
         uses: actions/checkout@v4
@@ -35,7 +33,7 @@ jobs:
       - name: "Set up Cloud SDK"
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Install gke-gcloud-auth-plugin
+      - name: "Install gke-gcloud-auth-plugin"
         run: |
           gcloud components install gke-gcloud-auth-plugin --quiet
 
@@ -59,17 +57,6 @@ jobs:
 
       - name: "Deploy Postgres Resources"
         run: |
-          # Replace the image placeholder in the deployment manifest if needed
           sed -i "s|<POSTGRES_IMAGE_PLACEHOLDER>|${{ env.POSTGRES_IMAGE }}|g" kubernetes/postgres-deployment.yaml
           kubectl apply -f kubernetes/postgres-deployment.yaml -n ${{ env.GKE_NAMESPACE }}
           kubectl apply -f kubernetes/postgres-service.yaml -n ${{ env.GKE_NAMESPACE }}
-
-      - name: "Deploy Flyway Migration Job"
-        run: |
-          # Replace the image placeholder in the flyway migration job manifest if needed
-          sed -i "s|<FLYWAY_IMAGE_PLACEHOLDER>|${{ env.FLYWAY_IMAGE }}|g" kubernetes/flyway-migration-job.yaml
-          kubectl apply -f kubernetes/flyway-migration-job.yaml -n ${{ env.GKE_NAMESPACE }}
-
-      - name: "Wait for Flyway Migration Job to Complete"
-        run: |
-          kubectl wait --for=condition=complete --timeout=300s job/flyway-migration -n ${{ env.GKE_NAMESPACE }}
