@@ -1,23 +1,14 @@
 name: "Run Flyway Migrations"
 
 on:
-  push:
-    branches:
-      - "main"
-  workflow_dispatch:
-
-env:
-  PROJECT_ID: "${{ secrets.PROJECT_ID }}"
-  GKE_CLUSTER: "${{ secrets.GKE_CLUSTER }}"
-  GKE_ZONE: "${{ secrets.GKE_ZONE }}"
-  GKE_NAMESPACE: "${{ secrets.GKE_NAMESPACE }}"
+  workflow_run:
+    workflows: ["Deploy Database"]  # Must exactly match the name of the dependent workflow
+    types:
+      - completed
 
 jobs:
   migrations:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     steps:
       - name: "Checkout"
         uses: actions/checkout@v4
@@ -36,16 +27,13 @@ jobs:
 
       - name: "Get GKE Credentials"
         run: |
-          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} \
-            --zone ${{ env.GKE_ZONE }} \
-            --project ${{ env.PROJECT_ID }}
+          gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER }} --zone ${{ secrets.GKE_ZONE }} --project ${{ secrets.PROJECT_ID }}
 
       - name: "Deploy Flyway Migration Job"
         run: |
-          # If your job manifest references the same FLYWAY_IMAGE placeholder, you could do:
-          # sed -i "s|<FLYWAY_IMAGE_PLACEHOLDER>|<your-flyway-image>|g" kubernetes/flyway-migration-job.yaml
-          kubectl apply -f kubernetes/flyway-migration-job.yaml -n ${{ env.GKE_NAMESPACE }}
+          sed -i "s|<FLYWAY_IMAGE_PLACEHOLDER>|${{ secrets.GAR_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.GAR_NAME }}/flyway-migrations:latest|g" kubernetes/flyway-migration-job.yaml
+          kubectl apply -f kubernetes/flyway-migration-job.yaml -n ${{ secrets.GKE_NAMESPACE }}
 
       - name: "Wait for Flyway Migration Job to Complete"
         run: |
-          kubectl wait --for=condition=complete --timeout=300s job/flyway-migration -n ${{ env.GKE_NAMESPACE }}
+          kubectl wait --for=condition=complete --timeout=300s job/flyway-migration -n ${{ secrets.GKE_NAMESPACE }}
