@@ -1,0 +1,51 @@
+name: "Run Flyway Migrations"
+
+on:
+  push:
+    branches:
+      - "main"
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: "${{ secrets.PROJECT_ID }}"
+  GKE_CLUSTER: "${{ secrets.GKE_CLUSTER }}"
+  GKE_ZONE: "${{ secrets.GKE_ZONE }}"
+  GKE_NAMESPACE: "${{ secrets.GKE_NAMESPACE }}"
+
+jobs:
+  migrations:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      - name: "Authenticate to GCP"
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: "${{ secrets.GCP_CREDS }}"
+
+      - name: "Set up Cloud SDK"
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: "Install gke-gcloud-auth-plugin"
+        run: |
+          gcloud components install gke-gcloud-auth-plugin --quiet
+
+      - name: "Get GKE Credentials"
+        run: |
+          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} \
+            --zone ${{ env.GKE_ZONE }} \
+            --project ${{ env.PROJECT_ID }}
+
+      - name: "Deploy Flyway Migration Job"
+        run: |
+          # If your job manifest references the same FLYWAY_IMAGE placeholder, you could do:
+          # sed -i "s|<FLYWAY_IMAGE_PLACEHOLDER>|<your-flyway-image>|g" kubernetes/flyway-migration-job.yaml
+          kubectl apply -f kubernetes/flyway-migration-job.yaml -n ${{ env.GKE_NAMESPACE }}
+
+      - name: "Wait for Flyway Migration Job to Complete"
+        run: |
+          kubectl wait --for=condition=complete --timeout=300s job/flyway-migration -n ${{ env.GKE_NAMESPACE }}
