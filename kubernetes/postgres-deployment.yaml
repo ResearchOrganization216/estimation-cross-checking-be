@@ -54,6 +54,9 @@ spec:
                 secretKeyRef:
                   name: postgres-secret
                   key: password
+            # Setting PGDATA to use a subdirectory so that the volume's lost+found doesn't interfere
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           volumeMounts:
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data
