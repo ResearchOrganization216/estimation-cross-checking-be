@@ -8,5 +8,5 @@ spec:
     app: estimation-crosschecking
   ports:
     - protocol: TCP
-      port: 80 # External port
+      port: 5003 # External port
       targetPort: 5003 # Container port
