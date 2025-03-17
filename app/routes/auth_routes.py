@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from config import Config
 from google.oauth2 import service_account
 from google.cloud import storage
+import google.auth
 from werkzeug.security import generate_password_hash, check_password_hash
 from database import db
 from app.types.user import User
