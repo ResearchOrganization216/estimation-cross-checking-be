@@ -58,6 +58,10 @@ jobs:
           kubectl apply -f kubernetes/backend-deployment.yaml -n ${{ env.GKE_NAMESPACE }}
           kubectl apply -f kubernetes/backend-service.yaml -n ${{ env.GKE_NAMESPACE }}
 
+      - name: "Restart Service Deployment"
+        run: |
+          kubectl rollout restart deployment estimation-crosschecking -n ${{ env.GKE_NAMESPACE }}
+
       - name: "Show Service Output"
         run: |
           kubectl get svc estimation-crosschecking-be -n ${{ env.GKE_NAMESPACE }}
