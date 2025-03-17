@@ -63,4 +63,4 @@ jobs:
 
       - name: "Restart Service Deployment"
         run: |
-          kubectl rollout restart deployment postgres -n ${{ env.GKE_NAMESPACE }}
+          kubectl rollout restart statefulset postgres -n ${{ env.GKE_NAMESPACE }}
