@@ -1,5 +1,5 @@
 class Config:
-    SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:password@postgres:5432/InnoAInsure'
+    SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:password@34.142.175.163:5432/InnoAInsure'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     BUCKET_NAME = "innoainsure-project-bucket" 
      # For local development, provide a key file; in production, you can set this to an empty string or None.
