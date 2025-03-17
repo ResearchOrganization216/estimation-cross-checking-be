@@ -18,6 +18,7 @@ spec:
         - name: backend
           # The image will be substituted by the CI/CD workflow; placeholder below.
           image: asia-southeast1-docker.pkg.dev/innoainsure-project/innoainsure-be/estimation-cross-checking:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 5003
           env:
