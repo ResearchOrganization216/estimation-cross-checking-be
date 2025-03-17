@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: estimation-crosschecking
+  labels:
+    app: estimation-crosschecking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: estimation-crosschecking
+  template:
+    metadata:
+      labels:
+        app: estimation-crosschecking
+    spec:
+      containers:
+        - name: backend
+          # The image will be substituted by the CI/CD workflow; placeholder below.
+          image: asia-southeast1-docker.pkg.dev/innoainsure-project/innoainsure-be/estimation-cross-checking:latest
+          ports:
+            - containerPort: 5003
+          env:
+            - name: PORT
+              value: "5003"
