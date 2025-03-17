@@ -60,3 +60,7 @@ jobs:
           sed -i "s|<POSTGRES_IMAGE_PLACEHOLDER>|${{ env.POSTGRES_IMAGE }}|g" kubernetes/postgres-deployment.yaml
           kubectl apply -f kubernetes/postgres-deployment.yaml -n ${{ env.GKE_NAMESPACE }}
           kubectl apply -f kubernetes/postgres-service.yaml -n ${{ env.GKE_NAMESPACE }}
+
+      - name: "Restart Service Deployment"
+        run: |
+          kubectl rollout restart deployment postgres -n ${{ env.GKE_NAMESPACE }}
