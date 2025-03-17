@@ -64,4 +64,4 @@ jobs:
 
       - name: "Show Service Output"
         run: |
-          kubectl get svc estimation-crosschecking-be -n ${{ env.GKE_NAMESPACE }}
+          kubectl get svc estimation-crosschecking -n ${{ env.GKE_NAMESPACE }}
