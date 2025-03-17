@@ -10,9 +10,12 @@ BUCKET_NAME = Config.BUCKET_NAME
 KEY_PATH = Config.KEY_PATH
 PROJECT_ID = Config.PROJECT_ID
 
-# Create credentials object and initialize the Storage client
-credentials = service_account.Credentials.from_service_account_file(KEY_PATH)
-client = storage.Client(credentials=credentials, project=PROJECT_ID)
+if Config.KEY_PATH:
+    credentials = service_account.Credentials.from_service_account_file(Config.KEY_PATH)
+    storage_client = storage.Client(credentials=credentials, project=Config.PROJECT_ID)
+else:
+    # In Cloud Run, KEY_PATH will be empty so use the default credentials.
+    storage_client = storage.Client(project=Config.PROJECT_ID)
 
 @upload_bp.route('/upload', methods=['POST'])
 def upload_file():
