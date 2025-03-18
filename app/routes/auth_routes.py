@@ -14,6 +14,7 @@ auth_bp = Blueprint('auth_bp', __name__)
 
 creds, project = google.auth.default()
 print("Using credentials for account:", getattr(creds, "service_account_email", "Unknown"))
+print(creds.__dict__)
 
 # Setup Google Cloud Storage client using config values
 if Config.KEY_PATH:
