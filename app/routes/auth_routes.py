@@ -46,6 +46,8 @@ def register_user():
     if file:
         try:
             bucket = storage_client.bucket(Config.BUCKET_NAME)
+            print("Storage bucket:", bucket)
+            print("Bucket name:", Config.BUCKET_NAME)
             # Prepend the uuid to the filename and store under "user_attachments" folder
             new_filename = f"user_attachments/{user_uuid}_{file.filename}"
             blob = bucket.blob(new_filename)

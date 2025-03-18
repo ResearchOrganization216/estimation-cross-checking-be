@@ -28,9 +28,12 @@ def upload_file():
         return jsonify({"error": "No file selected."}), 400
 
     try:
-        bucket = client.bucket(BUCKET_NAME)
+        bucket = storage_client.bucket(BUCKET_NAME)
         blob = bucket.blob(file.filename)
         blob.upload_from_file(file)
+
+        print("Storage bucket:", bucket)
+        print("Bucket name:", BUCKET_NAME)
         
         # Not calling blob.make_public() since uniform bucket-level access is enabled.
         return jsonify({
