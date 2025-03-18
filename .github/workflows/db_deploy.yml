@@ -1,0 +1,66 @@
+name: "Deploy Database"
+
+on:
+  push:
+    branches:
+      - "main"
+
+env:
+  PROJECT_ID: "${{ secrets.PROJECT_ID }}"
+  GKE_CLUSTER: "${{ secrets.GKE_CLUSTER }}"
+  GKE_ZONE: "${{ secrets.GKE_ZONE }}"
+  GKE_NAMESPACE: "${{ secrets.GKE_NAMESPACE }}"
+  GAR_REGION: "${{ secrets.GAR_REGION }}"
+  GAR_NAME: "${{ secrets.GAR_NAME }}"
+  POSTGRES_IMAGE: "${{ secrets.GAR_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.GAR_NAME }}/postgres:latest"
+  FLYWAY_IMAGE: "${{ secrets.GAR_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.GAR_NAME }}/flyway-migrations:latest"
+
+jobs:
+  deploy-db:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      - name: "Authenticate to GCP"
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: "${{ secrets.GCP_CREDS }}"
+
+      - name: "Set up Cloud SDK"
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: "Install gke-gcloud-auth-plugin"
+        run: |
+          gcloud components install gke-gcloud-auth-plugin --quiet
+
+      - name: "Docker Auth To GAR"
+        run: |
+          gcloud auth configure-docker "${{ env.GAR_REGION }}-docker.pkg.dev"
+
+      - name: "Build and Push Postgres Image"
+        run: |
+          docker build -t "${{ env.POSTGRES_IMAGE }}" -f docker/postgres/Dockerfile .
+          docker push "${{ env.POSTGRES_IMAGE }}"
+
+      - name: "Build and Push Flyway Image"
+        run: |
+          docker build -t "${{ env.FLYWAY_IMAGE }}" -f docker/flyway/Dockerfile .
+          docker push "${{ env.FLYWAY_IMAGE }}"
+
+      - name: "Get GKE Credentials"
+        run: |
+          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} --zone ${{ env.GKE_ZONE }} --project ${{ env.PROJECT_ID }}
+
+      - name: "Deploy Postgres Resources"
+        run: |
+          sed -i "s|<POSTGRES_IMAGE_PLACEHOLDER>|${{ env.POSTGRES_IMAGE }}|g" kubernetes/postgres-deployment.yaml
+          kubectl apply -f kubernetes/postgres-deployment.yaml -n ${{ env.GKE_NAMESPACE }}
+          kubectl apply -f kubernetes/postgres-service.yaml -n ${{ env.GKE_NAMESPACE }}
+
+      - name: "Restart Service Deployment"
+        run: |
+          kubectl rollout restart statefulset postgres -n ${{ env.GKE_NAMESPACE }}
