@@ -14,6 +14,7 @@ spec:
       labels:
         app: estimation-crosschecking
     spec:
+      serviceAccountName: innoainsure-ksa
       containers:
         - name: backend
           # The image will be substituted by the CI/CD workflow; placeholder below.
