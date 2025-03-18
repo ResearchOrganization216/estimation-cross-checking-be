@@ -45,7 +45,7 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: asia-southeast1-docker.pkg.dev/innoainsure-project/innoainsure-be/postgres:latest
+          image: asia-southeast1-docker.pkg.dev/innoainsure-project-43/innoainsure-be/postgres:latest
           ports:
             - containerPort: 5432
           env:
