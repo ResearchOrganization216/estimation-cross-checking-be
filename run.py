@@ -15,7 +15,7 @@ def create_app():
     db.init_app(app)
     
     # Registering the blueprint for endpoints with a URL prefix
-    app.register_blueprint(role_bp, url_prefix='/api/role-apis')
+    app.register_blueprint(role_bp, url_prefix='/api/roles')
     app.register_blueprint(upload_bp, url_prefix='/api/files')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     
